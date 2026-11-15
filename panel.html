@@ -1,0 +1,328 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<title>Airlock</title>
+<style>
+:root {
+  color-scheme: light dark;
+  --bg: #ffffff;
+  --fg: #1a1d21;
+  --muted: #68707b;
+  --line: #e3e6ea;
+  --field: #ffffff;
+  --button: #f0f2f4;
+  --hover: #eceef1;
+  --accent: #1863dc;
+  --accent-hover: #1455bd;
+  --on-accent: #ffffff;
+  --bad: #b3261e;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #1f2023;
+    --fg: #e7e9ec;
+    --muted: #949ba5;
+    --line: #33363b;
+    --field: #17181a;
+    --button: #2d2f34;
+    --hover: #2c2e33;
+    --accent: #5b9bff;
+    --accent-hover: #7aaeff;
+    --on-accent: #0d1320;
+    --bad: #ff8a80;
+  }
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; }
+body {
+  background: var(--bg);
+  color: var(--fg);
+  font: 14px/1.45 "Segoe UI Variable Text", "Segoe UI", system-ui, sans-serif;
+  font-variant-numeric: tabular-nums;
+  user-select: none;
+  cursor: default;
+}
+[hidden] { display: none !important; }
+svg { display: block; fill: none; stroke: currentColor; stroke-linecap: round; stroke-linejoin: round; }
+p { margin: 4px 0 0; }
+.muted { color: var(--muted); }
+.bad { color: var(--bad); }
+.small { font-size: 13px; }
+
+.bar { display: flex; align-items: center; height: 40px; padding-left: 14px; }
+.brand { flex: 1; display: flex; align-items: center; gap: 8px; align-self: stretch; font-size: 13px; font-weight: 600; }
+.brand svg { width: 16px; height: 16px; color: var(--accent); stroke-width: 2; }
+.bar button { width: 44px; height: 40px; padding: 0; border-radius: 0; background: none; display: grid; place-items: center; color: var(--muted); }
+.bar button:hover { background: var(--hover); color: var(--fg); }
+.bar button svg { width: 10px; height: 10px; stroke-width: 1.2; }
+
+.hero { display: grid; justify-items: center; padding: 6px 20px 22px; text-align: center; }
+.ring { width: 64px; height: 64px; color: var(--accent); }
+.ring.bad { color: var(--bad); }
+.ring .track { stroke: var(--line); stroke-width: 3; }
+.ring .arc { stroke-width: 3; stroke-dasharray: 170; stroke-dashoffset: 170; transform: rotate(-90deg); transform-origin: 32px 32px; transition: stroke-dashoffset .5s ease; }
+.ring .glyph { stroke-width: 3.5; opacity: 0; }
+.ring.ok .arc, .ring.bad .arc { stroke-dashoffset: 0; }
+.ring.ok .tick, .ring.bad .cross { opacity: 1; }
+.ring.busy .arc { stroke-dasharray: 46 124; stroke-dashoffset: 0; transition: none; animation: spin .9s linear infinite; }
+.ring.ok.fresh .tick { stroke-dasharray: 40; stroke-dashoffset: 40; animation: draw .35s .3s ease forwards; }
+h1 { margin: 12px 0 0; font-size: 20px; line-height: 1.3; font-weight: 600; }
+
+.block { padding: 14px 20px; border-top: 1px solid var(--line); }
+.head { display: flex; align-items: center; gap: 10px; width: 100%; }
+h2 { flex: 1; margin: 0; font-size: 14px; font-weight: 600; text-align: left; }
+.row { display: flex; gap: 8px; margin-top: 10px; }
+input {
+  flex: 1;
+  min-width: 0;
+  height: 34px;
+  padding: 0 10px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--field);
+  color: inherit;
+  font: inherit;
+  user-select: text;
+}
+input::placeholder { color: var(--muted); }
+input:focus-visible, button:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+button {
+  height: 34px;
+  padding: 0 14px;
+  border: 0;
+  border-radius: 6px;
+  background: var(--button);
+  color: inherit;
+  font: inherit;
+  white-space: nowrap;
+}
+button:disabled { opacity: .5; }
+button.primary:enabled { background: var(--accent); color: var(--on-accent); }
+button.primary:hover:enabled { background: var(--accent-hover); }
+button.link, button.head { height: auto; padding: 0; background: none; border-radius: 4px; }
+button.link { color: var(--accent); }
+button.link:hover:enabled { text-decoration: underline; }
+.chevron { width: 7px; height: 7px; margin: 0 3px 3px 0; border: solid var(--muted); border-width: 0 1.5px 1.5px 0; transform: rotate(45deg); transition: transform .15s ease, margin .15s ease; }
+.open .chevron { margin: 3px 3px 0 0; transform: rotate(-135deg); }
+
+ul { list-style: none; margin: 10px 0 0; padding: 0; }
+li { display: grid; grid-template-columns: 20px 1fr; align-items: baseline; padding: 2px 0; }
+li .mark { color: var(--accent); }
+li.failed .mark, li.failed .name { color: var(--bad); }
+li.pending .name { color: var(--muted); }
+li.pending .mark { width: 10px; height: 10px; align-self: center; border: 1.5px solid var(--line); border-top-color: var(--muted); border-radius: 50%; animation: turn .8s linear infinite; }
+li.fresh .mark { animation: pop .3s both; animation-delay: calc(var(--i) * 70ms); }
+li .detail { grid-column: 2; color: var(--muted); font-size: 12px; line-height: 1.35; overflow-wrap: anywhere; }
+dl { margin: 10px 0 0; }
+dt { color: var(--muted); font-size: 12px; }
+dt:not(:first-child) { margin-top: 6px; }
+dd { margin: 0; white-space: pre-line; overflow-wrap: anywhere; user-select: text; cursor: text; }
+.foot { display: flex; align-items: baseline; gap: 10px; margin-top: 10px; }
+
+@keyframes spin { from { transform: rotate(-90deg); } to { transform: rotate(270deg); } }
+@keyframes turn { to { transform: rotate(360deg); } }
+@keyframes draw { to { stroke-dashoffset: 0; } }
+@keyframes pop { from { opacity: 0; transform: scale(.4); } to { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: reduce) {
+  * { animation-duration: 0s !important; animation-delay: 0s !important; transition: none !important; }
+}
+</style>
+</head>
+<body>
+<header class="bar" id="bar">
+  <div class="brand">
+    <svg viewBox="0 0 16 16"><circle cx="8" cy="8" r="6"/><path d="M2.5 8h11"/></svg>
+    Airlock
+  </div>
+  <button id="minimize" aria-label="Свернуть"><svg viewBox="0 0 10 10"><path d="M0 5h10"/></svg></button>
+  <button id="close" aria-label="Закрыть"><svg viewBox="0 0 10 10"><path d="M0 0l10 10M10 0L0 10"/></svg></button>
+</header>
+<section class="hero">
+  <svg id="ring" class="ring" viewBox="0 0 64 64">
+    <circle class="track" cx="32" cy="32" r="27"/>
+    <circle class="arc" cx="32" cy="32" r="27"/>
+    <path class="glyph tick" d="M21 33l8 8 15-17"/>
+    <path class="glyph cross" d="M23 23l18 18M41 23L23 41"/>
+  </svg>
+  <h1 id="state"></h1>
+  <p id="sub" class="muted small"></p>
+  <p id="app-error" class="bad small"></p>
+</section>
+<section class="block">
+  <div class="head">
+    <h2>Прокси</h2>
+    <button id="edit" class="link"></button>
+  </div>
+  <p id="address"></p>
+  <p id="exit" class="muted small"></p>
+  <div id="editor">
+    <div class="row">
+      <input id="proxy" placeholder="ip:port:user:password" spellcheck="false" autocomplete="off">
+      <button id="apply" class="primary" disabled>Применить</button>
+    </div>
+    <p class="muted small">Программы в песочнице закроются.</p>
+    <p id="proxy-error" class="bad small"></p>
+  </div>
+</section>
+<section class="block">
+  <button id="toggle" class="head">
+    <h2>Проверки</h2>
+    <span id="summary" class="muted"></span>
+    <span class="chevron"></span>
+  </button>
+  <div id="details">
+    <ul id="checks"></ul>
+    <div class="foot">
+      <button id="verify" class="link">Проверить снова</button>
+      <span id="checked" class="muted small"></span>
+    </div>
+  </div>
+</section>
+<section class="block">
+  <button id="ids-toggle" class="head">
+    <h2>ID песочницы</h2>
+    <span class="chevron"></span>
+  </button>
+  <div id="ids-details">
+    <dl id="ids"></dl>
+    <div class="foot">
+      <button id="renew" class="link">Новый компьютер</button>
+      <span id="renew-state" class="muted small"></span>
+    </div>
+    <p id="renew-error" class="bad small"></p>
+  </div>
+</section>
+<script>
+const el = id => document.getElementById(id);
+const show = (id, on) => { el(id).hidden = !on; };
+const send = (name, arg) => window.chrome.webview.postMessage(JSON.stringify({ name, arg: String(arg ?? '') }));
+const proxyErrors = [
+  [/^expected ip:port.*$/, 'Нужна строка вида ip:port:user:password'],
+  [/^the second field.*$/, 'Второе поле должно быть номером порта'],
+  [/^the proxy did not work.*$/, 'Прокси не ответил ни как socks5, ни как http'],
+  [/^time zone of the exit.*$/, 'Не удалось определить часовой пояс выхода'],
+  [/^unknown command$/, 'Служба старой версии, нужна переустановка'],
+];
+let view = { busy: false };
+let editing = false;
+let expanded = false;
+let hadFailures = false;
+let idsOpen = false;
+
+function render(next) {
+  const applied = view.busy && !next.busy && !next.proxy_error;
+  const fresh = !!view.checking && !next.checking;
+  view = next;
+  const st = view.status;
+  const checks = view.checks || [];
+  const live = view.live || 0;
+  const judged = view.checking ? checks.slice(0, live) : checks;
+  const failed = judged.filter(c => !c.ok).length;
+  const passed = judged.length - failed;
+  const probed = !view.checking && checks.length > live;
+
+  let state = 'busy', title = 'Проверяю', sub = 'несколько секунд';
+  if (!st) [state, title, sub] = ['bad', 'Нет связи со службой', 'Запустите установщик Airlock ещё раз'];
+  else if (view.installing) [state, title, sub] = ['busy', 'Ставлю Claude', 'один раз, несколько минут'];
+  else if (failed) [state, title, sub] = ['bad', 'Не защищено', 'не пройдено: ' + failed + ' из ' + checks.length];
+  else if (probed) [state, title, sub] = ['ok', 'Защищено', checks.length + ' из ' + checks.length + ' проверок пройдено'];
+  el('ring').setAttribute('class', 'ring ' + state + (fresh ? ' fresh' : ''));
+  el('state').textContent = title;
+  el('sub').textContent = sub;
+  let launch = view.app_error || '';
+  if (/Access is denied|cannot find/.test(launch)) launch = 'Claude в песочнице не найден или недоступен.';
+  else if (launch) launch = 'Claude не запустился: ' + launch;
+  el('app-error').textContent = launch;
+  show('app-error', !!launch);
+
+  const proxy = st && st.proxy ? st.proxy.replace(/^\w+:\/\//, '') : '';
+  const host = proxy.replace(/:\d+$/, '');
+  el('address').textContent = !st ? 'Недоступен' : proxy || 'Не задан';
+  const exit = st && st.exit_country ? 'выход ' + st.exit_country + (st.exit_ip && st.exit_ip !== host ? ' ' + st.exit_ip : '') : '';
+  el('exit').textContent = [proxy && st.proxy.split('://')[0], exit, st && st.tz].filter(Boolean).join(', ');
+  show('exit', !!proxy);
+  if (applied) {
+    el('proxy').value = '';
+    editing = false;
+  }
+  const forced = !!st && !proxy;
+  el('edit').textContent = editing ? 'Отмена' : 'Изменить';
+  show('edit', !!st && !forced && !view.busy);
+  show('editor', !!st && (editing || forced));
+  el('apply').disabled = view.busy || el('proxy').value.trim() === '';
+  el('apply').textContent = view.busy ? 'Проверяю' : 'Применить';
+  el('proxy').disabled = view.busy;
+  let failure = view.proxy_error || '';
+  for (const [re, ru] of proxyErrors) if (re.test(failure)) failure = failure.replace(re, ru);
+  el('proxy-error').textContent = failure;
+  show('proxy-error', !!failure);
+
+  if (failed && !hadFailures) expanded = true;
+  hadFailures = failed > 0;
+  el('summary').textContent = passed + ' из ' + checks.length;
+  el('summary').className = failed ? 'bad' : 'muted';
+  el('toggle').classList.toggle('open', expanded);
+  el('checks').replaceChildren(...checks.map((c, i) => {
+    const pending = view.checking && i >= live;
+    const li = document.createElement('li');
+    li.className = pending ? 'pending' : (c.ok ? '' : 'failed') + (fresh && i >= live ? ' fresh' : '');
+    li.style.setProperty('--i', i - live);
+    const mark = document.createElement('span');
+    mark.className = 'mark';
+    mark.textContent = pending ? '' : c.ok ? '✓' : '✕';
+    const name = document.createElement('span');
+    name.className = 'name';
+    name.textContent = c.name;
+    li.append(mark, name);
+    if (!pending && !c.ok && c.detail) {
+      const detail = document.createElement('span');
+      detail.className = 'detail';
+      detail.textContent = c.detail;
+      li.append(detail);
+    }
+    return li;
+  }));
+  show('details', expanded);
+  el('verify').disabled = view.checking;
+  el('checked').textContent = view.checking || !view.checked_at ? '' : 'проверено в ' + view.checked_at;
+
+  const ids = view.ids || [];
+  el('ids-toggle').classList.toggle('open', idsOpen);
+  el('ids').replaceChildren(...ids.flatMap(r => {
+    const dt = document.createElement('dt');
+    dt.textContent = r.name;
+    const dd = document.createElement('dd');
+    dd.textContent = r.value;
+    return [dt, dd];
+  }));
+  show('ids', ids.length > 0);
+  show('ids-details', idsOpen);
+  el('renew').disabled = !st || view.checking || view.resetting;
+  el('renew-state').textContent = view.resetting ? 'Сбрасываю' : view.checking && !ids.length ? 'Читаю ID' : '';
+  el('renew-error').textContent = view.reset_error || '';
+  show('renew-error', !!view.reset_error);
+  send('fit', Math.ceil(document.documentElement.getBoundingClientRect().height));
+}
+
+function reset() {
+  editing = false;
+  el('proxy').value = '';
+  render(view);
+}
+
+el('bar').addEventListener('mousedown', e => { if (e.button === 0 && !e.target.closest('button')) send('drag'); });
+el('minimize').addEventListener('click', () => send('minimize'));
+el('close').addEventListener('click', () => send('close'));
+el('edit').addEventListener('click', () => { editing = !editing; render(view); if (editing) el('proxy').focus(); });
+el('toggle').addEventListener('click', () => { expanded = !expanded; render(view); });
+el('proxy').addEventListener('input', () => render(view));
+el('proxy').addEventListener('keydown', e => { if (e.key === 'Enter') el('apply').click(); });
+el('apply').addEventListener('click', () => send('proxy', el('proxy').value.trim()));
+el('verify').addEventListener('click', () => send('verify'));
+el('ids-toggle').addEventListener('click', () => { idsOpen = !idsOpen; render(view); });
+el('renew').addEventListener('click', () => send('reset'));
+send('ready');
+</script>
+</body>
+</html>
